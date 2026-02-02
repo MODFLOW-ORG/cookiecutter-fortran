@@ -1,0 +1,173 @@
+name: {{cookiecutter.name}} checks
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  push:
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+concurrency:
+  group: {% raw %}${{ github.workflow }}-${{ github.ref }}{% endraw %}
+  cancel-in-progress: true
+env:
+  PIXI_BETA_WARNING_OFF: true
+  DIST: dist-path
+  name: {{cookiecutter.name}}
+jobs:
+  build:
+    name: Build and Test on {% raw %}${{ matrix.os }} with ${{ matrix.compiler }} ${{ matrix.version }}{% endraw %}
+    runs-on: {% raw %}${{ matrix.os }}{% endraw %}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-latest, compiler: gcc, version: 13, shell: bash, release: no}
+          - {os: macos-14, compiler: gcc, version: 13, shell: bash, release: yes}
+          - {os: macos-15-intel, compiler: gcc, version: 13, shell: bash, release: yes}
+          - {os: windows-latest, compiler: gcc, version: 13, shell: pwsh, release: no}
+          - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.7, shell: bash, release: no}
+          - {os: ubuntu-latest, compiler: gcc, version: 12, shell: bash, release: no}
+          - {os: ubuntu-latest, compiler: gcc, version: 11, shell: bash, release: no}
+          - {os: ubuntu-22.04, compiler: intel, version: "2025.0", shell: bash, release: yes}
+          - {os: windows-2022, compiler: intel, version: "2025.0", shell: pwsh, release: yes}
+    defaults:
+      run:
+        shell: {% raw %}${{ matrix.shell }}{% endraw %}
+    steps:
+      - name: Checkout {% raw %}${{ env.name }}{% endraw %}
+        uses: actions/checkout@v6
+        with:
+          path: {% raw %}${{ env.name }}{% endraw %}
+
+      - name: Setup {% raw %}${{ matrix.compiler }} ${{ matrix.version }} on ${{ matrix.os }}{% endraw %}
+        uses: fortran-lang/setup-fortran@v1
+        with:
+          compiler: {% raw %}${{ matrix.compiler}}{% endraw %}
+          version: {% raw %}${{ matrix.version }}{% endraw %}
+
+      - name: Set GCC_LIBPATH macos-14
+        if: matrix.os != 'macos-15-intel'
+        run: |
+          echo "GCC_LIBPATH=/opt/homebrew" >> {% raw %}$GITHUB_ENV{% endraw %}
+
+      - name: Set GCC_LIBPATH macos-15-intel
+        if: matrix.os == 'macos-15-intel'
+        run: |
+          echo "GCC_LIBPATH=/usr/local" >> {% raw %}$GITHUB_ENV{% endraw %}
+
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: v0.41.4
+          manifest-path: "{% raw %}${{ env.name }}{% endraw %}/pixi.toml"
+
+      - name: Set ostag
+        shell: bash
+        working-directory: {% raw %}${{ env.name }}{% endraw %}
+        id: ostag
+        run: |
+          echo "ostag=$(pixi run get-ostag)" >> {% raw %}$GITHUB_ENV{% endraw %}
+
+      - name: Create source zip file on Linux
+        if: {% raw %}${{ matrix.release == 'yes' && runner.os == 'Linux' }}{% endraw %}
+        working-directory: {% raw %}${{ env.name }}{% endraw %}
+        run: |
+          zip -r {% raw %}${{ env.name }}{% endraw %}_source.zip meson.build src/
+          ls -lha *.zip
+
+      - name: Hide dylibs on macOS
+        if: runner.os == 'macOS'
+        working-directory: {% raw %}${{ env.name }}{% endraw %}
+        run: |
+          version={% raw %}${{ matrix.version }}{% endraw %}
+          libpath="{% raw %}${{ env.GCC_LIBPATH }}{% endraw %}/opt/gcc@$version/lib/gcc/$version"
+          mv $libpath/libgfortran.5.dylib $libpath/libgfortran.5.dylib.bak
+          mv $libpath/libquadmath.0.dylib $libpath/libquadmath.0.dylib.bak
+
+      - name: Build {% raw %}${{ env.name }}{% endraw %}
+        working-directory: {% raw %}${{ env.name }}{% endraw %}
+        run: |
+          pixi run setup
+          pixi run build
+
+      - name: Show build log
+        if: failure()
+        working-directory: {% raw %}${{ env.name }}{% endraw %}
+        run: cat builddir/meson-logs/meson-log.txt
+
+      - name: Upload build log
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: meson-log.txt
+          path: {% raw %}${{ env.name }}{% endraw %}/builddir/meson-logs/meson-log.txt
+
+      - name: Unit test {% raw %}${{ env.name }}{% endraw %}
+        if: success()
+        working-directory: {% raw %}${{ env.name }}{% endraw %}
+        run: |
+          pixi run test
+
+      - name: Create zip file on MacOS and Linux
+        if: {% raw %}${{ matrix.release == 'yes' && runner.os != 'Windows' }}{% endraw %}
+        working-directory: {% raw %}${{ env.name }}{% endraw %}
+        run: |
+          zip -r -j ${ostag}.zip bin/
+          ls -lha *.zip
+
+      - name: Create zip file on Windows
+        if: {% raw %}${{ matrix.release == 'yes' && runner.os == 'Windows' }}{% endraw %}
+        working-directory: {% raw %}${{ env.name }}{% endraw %}
+        run: |
+          $ZipFileName = "$env:ostag.zip"
+          Compress-Archive -Path "bin\*" -DestinationPath $ZipFileName
+          ls *.zip
+
+      - name: Upload distribution archive
+        if: matrix.release == 'yes'
+        uses: actions/upload-artifact@v6
+        with:
+          name: {% raw %}${{ env.DIST }}-${{ matrix.os }}{% endraw %}
+          path: {% raw %}${{ env.name }}{% endraw %}/*.zip
+
+  release:
+    name: Make release
+    needs: build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+        with:
+          path: {% raw %}${{ env.name }}{% endraw %}
+
+      - name: Extract version number from the main meson.build file
+        working-directory: {% raw %}${{ env.name }}{% endraw %}
+        run: |
+          echo "version=$(grep -oE "([0-9]{1,}\.)+[0-9]{1,}" meson.build | head -n 1)" >> {% raw %}$GITHUB_ENV{% endraw %}
+
+      - name: Download distribution
+        uses: actions/download-artifact@v6
+        with:
+          pattern: {% raw %}${{ env.DIST }}{% endraw %}*
+          merge-multiple: true
+          path: {% raw %}${{ env.DIST }}{% endraw %}
+
+      - name: List distribution files
+        run: ls -l {% raw %}${{ env.DIST }}{% endraw %}
+
+      - name: Create release
+        if: github.event_name == 'workflow_dispatch'
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v{% raw %}${{ env.version }}{% endraw %}
+          name: "{% raw %}${{ env.name }}{% endraw %} executables"
+          artifacts: "{% raw %}${{ env.DIST }}{% endraw %}/*"
+          draft: false
+          allowUpdates: true
+          token: {% raw %}${{ secrets.GITHUB_TOKEN }}{% endraw %}

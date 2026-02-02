@@ -1,0 +1,22 @@
+{
+  "name": "myprogam",
+  "name_upper": "{{ cookiecutter.name.upper() }}",
+  "version": "1.0.0",
+  "description": "A MODFLOW-ORG Fortran program",
+  "documentation": "https://doi.org/...",
+  "year": "2026",
+  "org": "USGS",
+  "report_citation_title": "Report Title",
+  "report_citation_authors": "Author Names",
+  "report_citation_year": "{{ cookiecutter.year }}",
+  "report_citation_doi": "https://doi.org/...",
+  "software_citation_title": "Software Title",
+  "software_citation_authors": "Author Names",
+  "software_citation_year": "{{ cookiecutter.year }}",
+  "software_citation_doi": "https://doi.org/...",
+  "has_c_code": "no",
+  "languages": "{% if cookiecutter.has_c_code == 'yes' %}['fortran', 'c']{% else %}['fortran']{% endif %}",
+  "source_directory": "",
+  "git_init": "yes",
+  "test_build": "yes"
+}
