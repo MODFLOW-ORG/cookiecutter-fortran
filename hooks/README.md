@@ -2,6 +2,24 @@
 
 This directory contains hooks that run before and after project generation.
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [pre_gen_project.py](#pre_gen_projectpy)
+- [post_gen_project.py](#post_gen_projectpy)
+  - [Optional: Git Initialization](#optional-git-initialization)
+  - [Optional: Source File Management](#optional-source-file-management)
+  - [Optional: Build Testing](#optional-build-testing)
+  - [Always Runs](#always-runs)
+- [Customizing](#customizing)
+- [Use Cases](#use-cases)
+  - [Use Case 1: Legacy USGS Program Migration](#use-case-1-legacy-usgs-program-migration)
+  - [Use Case 2: New Program from Scratch](#use-case-2-new-program-from-scratch)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+
 ## pre_gen_project.py
 
 Runs before project generation. Validates user inputs:
