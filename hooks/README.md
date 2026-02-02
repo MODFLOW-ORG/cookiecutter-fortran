@@ -4,7 +4,6 @@ This directory contains hooks that run before and after project generation.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
 - [pre_gen_project.py](#pre_gen_projectpy)
 - [post_gen_project.py](#post_gen_projectpy)
