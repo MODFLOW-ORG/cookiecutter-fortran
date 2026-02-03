@@ -1,5 +1,6 @@
 # Template for Fortran programs
 
+[![Test template](https://github.com/MODFLOW-ORG/cookiecutter-fortran/actions/workflows/test.yml/badge.svg)](https://github.com/MODFLOW-ORG/cookiecutter-fortran/actions/workflows/test.yml)
 This is a cookiecutter template for creating Fortran program repositories with meson build system, pixi environment management, and GitHub Actions CI.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
