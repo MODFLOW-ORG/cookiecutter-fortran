@@ -6,6 +6,7 @@
   "documentation": "https://doi.org/...",
   "year": "2026",
   "org": "USGS",
+  "license": ["CC0", "MIT", "Apache-2.0", "GPL-3.0", "BSD-3-Clause", "None"],
   "report_citation_title": "Report Title",
   "report_citation_authors": "Author Names",
   "report_citation_year": "{{ cookiecutter.year }}",

@@ -2,8 +2,8 @@ project(
   '{{cookiecutter.name}}',
   {{cookiecutter.languages}},
   version: '{{cookiecutter.version}}',
-  license: 'CC0',
-  meson_version: '>= 1.3.1',
+  {% if cookiecutter.license != 'None' %}license: '{{cookiecutter.license}}',
+  {% endif %}meson_version: '>= 1.3.1',
   default_options : [
     'b_vscrt=static_from_buildtype',
     'buildtype=release',

@@ -1,0 +1,12 @@
+[project]
+name = "cookiecutter-fortran"
+channels = ["conda-forge"]
+platforms = ["win-64", "linux-64", "osx-64", "osx-arm64"]
+
+[dependencies]
+python = ">=3.10"
+cookiecutter = "*"
+
+[tasks]
+test = { cmd = "cookiecutter --no-input . name=testproject", cwd = ".." }
+clean = { cmd = "rm -rf ../testproject" }
