@@ -225,7 +225,7 @@ def test_build():
 def main():
     """Run post-generation tasks."""
     project_dir = os.getcwd()
-    source_directory = "{{ cookiecutter.source_directory }}".strip()
+    source_directory = r"{{ cookiecutter.source_directory }}".strip()
     git_init_flag = "{{ cookiecutter.git_init }}".lower() == "yes"
     test_build_flag = "{{ cookiecutter.test_build }}".lower() == "yes"
 
