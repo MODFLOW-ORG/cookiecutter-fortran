@@ -47,16 +47,6 @@ jobs:
           compiler: {% raw %}${{ matrix.compiler}}{% endraw %}
           version: {% raw %}${{ matrix.version }}{% endraw %}
 
-      - name: Set GCC_LIBPATH macos-14
-        if: matrix.os != 'macos-15-intel'
-        run: |
-          echo "GCC_LIBPATH=/opt/homebrew" >> {% raw %}$GITHUB_ENV{% endraw %}
-
-      - name: Set GCC_LIBPATH macos-15-intel
-        if: matrix.os == 'macos-15-intel'
-        run: |
-          echo "GCC_LIBPATH=/usr/local" >> {% raw %}$GITHUB_ENV{% endraw %}
-
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0.9.4
         with:
@@ -77,14 +67,25 @@ jobs:
           zip -r {% raw %}${{ env.name }}{% endraw %}_source.zip meson.build src/
           ls -lha *.zip
 
-      - name: Hide dylibs on macOS
+      # static link gfortran libs
+      - name: Hide dylibs (macOS)
         if: runner.os == 'macOS'
         working-directory: {% raw %}${{ env.name }}{% endraw %}
         run: |
-          version={% raw %}${{ matrix.version }}{% endraw %}
-          libpath="{% raw %}${{ env.GCC_LIBPATH }}{% endraw %}/opt/gcc@$version/lib/gcc/$version"
+          version="{% raw %}${{ matrix.version }}{% endraw %}"
+          brew_prefix="$(brew --prefix)"
+          libpath="$brew_prefix/opt/gcc@$version/lib/gcc/$version"
+          mv $libpath/libgcc_s.1.1.dylib $libpath/libgcc_s.1.1.dylib.bak
           mv $libpath/libgfortran.5.dylib $libpath/libgfortran.5.dylib.bak
           mv $libpath/libquadmath.0.dylib $libpath/libquadmath.0.dylib.bak
+          mv $libpath/libstdc++.6.dylib $libpath/libstdc++.6.dylib.bak
+
+      # static link libgcc
+      - name: Set LDFLAGS (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          ldflags="{% raw %}$LDFLAGS{% endraw %} -static-libgcc"
+          echo "LDFLAGS=$ldflags" >> {% raw %}$GITHUB_ENV{% endraw %}
 
       - name: Build {% raw %}${{ env.name }}{% endraw %}
         working-directory: {% raw %}${{ env.name }}{% endraw %}
@@ -101,7 +102,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v6
         with:
-          name: meson-log.txt
+          name: {% raw %}${{ matrix.os }}-${{ matrix.compiler}}-${{ matrix.version }}{% endraw %}-meson-log.txt
           path: {% raw %}${{ env.name }}{% endraw %}/builddir/meson-logs/meson-log.txt
 
       - name: Unit test {% raw %}${{ env.name }}{% endraw %}

@@ -13,5 +13,6 @@ sources = files(
 exe = executable(
                  '{{cookiecutter.name}}',
                  sources,
+                 dependencies: extra_deps,
                  install: true
                 )
